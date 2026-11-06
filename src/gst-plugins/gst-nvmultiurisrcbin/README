@@ -19,6 +19,30 @@ gst-nvmultiurisrcbincreator.h to support runtime source addition and deletion.
 Note: This bin is an Alpha release. Support might be limited.
 
 --------------------------------------------------------------------------------
+WARNING — Removing the last active source via REST API
+--------------------------------------------------------------------------------
+
+Removing the only active RTSP source through `POST /api/v1/stream/remove` can
+cause a GPU MMU fault (NVIDIA Xid 31) about 20 ms after the REST response. This
+results in `nvvideoconvert` buffer transformation failures and `nvinfer`
+internal stream errors from which the pipeline does not recover. A source added
+afterwards receives an HTTP 200 answer and a "new stream added" line, but no
+frames reach the pipeline.
+
+Removing one source while another source remains active does not reproduce the
+failure; frames continue to flow.
+
+Workaround: never let the active source count reach zero. Keep at least one
+source alive, or add a replacement source before removing the last one. An
+application-level helper is available at
+`src/apps/sample_apps/deepstream-server/safe_source_manager.py`, which wraps
+`/api/v1/stream/add` and `/api/v1/stream/remove` and refuses to remove the last
+active source.
+
+A regression test for this behaviour is available at
+`tests/nvmultiurisrcbin_remove_last_source/`.
+
+--------------------------------------------------------------------------------
 
 -------------------------------------------------------------------------------
 Install OpenTelemetry dependencies
